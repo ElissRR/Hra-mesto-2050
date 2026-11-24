@@ -1,0 +1,1566 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Město 2050 – Strategická hra starosty</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f1f5f9;
+            color: #0f172a;
+            overflow-x: hidden;
+        }
+
+        /* Animace pro dynamickou SVG scénu města */
+        @keyframes floatCloud {
+            0% { transform: translateX(-20px); }
+            50% { transform: translateX(20px); }
+            100% { transform: translateX(-20px); }
+        }
+        @keyframes pulseSun {
+            0%, 100% { transform: scale(1); opacity: 0.9; }
+            50% { transform: scale(1.08); opacity: 1; }
+        }
+        @keyframes rainFall {
+            0% { transform: translateY(-20px); opacity: 0; }
+            30% { opacity: 0.8; }
+            100% { transform: translateY(180px); opacity: 0; }
+        }
+        @keyframes windBlow {
+            0% { transform: translateX(-60px) scaleX(0.8); opacity: 0; }
+            50% { opacity: 0.7; }
+            100% { transform: translateX(120px) scaleX(1.2); opacity: 0; }
+        }
+        @keyframes waterRipple {
+            0%, 100% { transform: scaleX(1); }
+            50% { transform: scaleX(1.03); }
+        }
+
+        .cloud-anim { animation: floatCloud 18s ease-in-out infinite; }
+        .cloud-anim-slow { animation: floatCloud 26s ease-in-out infinite reverse; }
+        .sun-anim { transform-origin: 680px 65px; animation: pulseSun 5s ease-in-out infinite; }
+        .rain-drop { animation: rainFall 0.9s linear infinite; }
+        .wind-line { animation: windBlow 1.4s ease-in-out infinite; }
+        .river-anim { transform-origin: center; animation: waterRipple 4s ease-in-out infinite; }
+
+        /* Vlastní scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #e2e8f0; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+
+        .card-hover { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+        .card-hover:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08); }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- ==================== ÚVODNÍ OBRAZOVKA ==================== -->
+    <div id="start-screen" class="fixed inset-0 z-50 bg-gradient-to-br from-emerald-950 via-slate-900 to-cyan-950 text-white flex items-center justify-center p-4 overflow-y-auto">
+        <div class="max-w-3xl w-full bg-slate-900/80 backdrop-blur-md border border-emerald-500/30 rounded-3xl p-6 sm:p-10 shadow-2xl my-auto">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-xs font-semibold uppercase tracking-wider mb-4">
+                <span>🌱 Strategická simulace</span>
+                <span>•</span>
+                <span>2026 – 2050</span>
+            </div>
+            <h1 class="text-4xl sm:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-emerald-300 via-teal-200 to-sky-300 bg-clip-text text-transparent mb-4">
+                Město 2050
+            </h1>
+            <p class="text-slate-300 text-base sm:text-lg leading-relaxed mb-6">
+                Vítejte v křesle starosty! Během následujících <strong>12 funkčních období (24 let)</strong> rozhodnete o budoucnosti našeho města. Čekají vás vlny veder, přívalové deště, sucha i ekonomické výzvy. Dokážete vyvážit rozpočet, spokojenost obyvatel a investice do <strong>modrozelené infrastruktury</strong> tak, aby město v roce 2050 vzkvétalo?
+            </p>
+
+            <!-- Výběr obtížnosti -->
+            <div class="mb-8">
+                <label class="block text-sm font-semibold text-slate-300 mb-3">Zvolte obtížnost mandátu:</label>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <button type="button" onclick="selectDifficulty('normal')" id="diff-normal"
+                        class="diff-btn text-left p-4 rounded-2xl border-2 border-emerald-400 bg-emerald-950/60 transition cursor-pointer">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="font-bold text-emerald-300 text-lg">🌿 Vyvážený rozvoj (Normální)</span>
+                            <span class="text-xs bg-emerald-500/30 text-emerald-200 px-2 py-0.5 rounded-full">Doporučeno</span>
+                        </div>
+                        <p class="text-xs text-slate-300">Startovní rozpočet 110 mil. Kč, standardní intenzita klimatických jevů. Ideální pro strategické plánování.</p>
+                    </button>
+                    <button type="button" onclick="selectDifficulty('hard')" id="diff-hard"
+                        class="diff-btn text-left p-4 rounded-2xl border-2 border-slate-700 bg-slate-800/50 hover:border-amber-400/60 transition cursor-pointer">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="font-bold text-amber-300 text-lg">🔥 Klimatická výzva (Těžká)</span>
+                            <span class="text-xs bg-amber-500/20 text-amber-200 px-2 py-0.5 rounded-full">Pro experty</span>
+                        </div>
+                        <p class="text-xs text-slate-300">Startovní rozpočet 85 mil. Kč, častější a silnější extrémy počasí. Každá chyba se draze platí.</p>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Stručný návod -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-8 text-xs text-slate-300">
+                <div class="bg-slate-800/70 p-3 rounded-xl border border-slate-700/70">
+                    <strong class="text-white block mb-1">1. Vyvážené investice</strong>
+                    Rozvíjejte všechny 3 sekce (modrozelenou, šedou/energii i společnost).
+                </div>
+                <div class="bg-slate-800/70 p-3 rounded-xl border border-slate-700/70">
+                    <strong class="text-white block mb-1">2. Klimatické zkoušky</strong>
+                    Vaše předchozí stavby přímo určí, zda město zvládne vedra či povodně.
+                </div>
+                <div class="bg-slate-800/70 p-3 rounded-xl border border-slate-700/70">
+                    <strong class="text-white block mb-1">3. Cíl: Rok 2050</strong>
+                    Nenechte odolnost ani spokojenost klesnout na 0 % a vybudujte město budoucnosti.
+                </div>
+            </div>
+
+            <button onclick="startGame()"
+                class="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-extrabold text-lg shadow-lg shadow-emerald-500/25 transition transform hover:scale-[1.01] active:scale-[0.99] cursor-pointer">
+                🏛️ Nastoupit do úřadu starosty (Rok 2026)
+            </button>
+        </div>
+    </div>
+
+    <!-- ==================== HLAVNÍ HERNÍ ROZHRANÍ ==================== -->
+    <div id="game-container" class="hidden flex-1 flex flex-col max-w-7xl w-full mx-auto px-3 sm:px-6 py-3 sm:py-5 gap-4">
+
+        <!-- HORNÍ LIŠTA UKAZATELŮ -->
+        <header class="bg-white rounded-2xl shadow-sm border border-slate-200 p-3 sm:p-4">
+            <div class="flex flex-wrap items-center justify-between gap-3 pb-3 mb-3 border-b border-slate-100">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-extrabold text-lg shadow-sm">
+                        M50
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h1 class="font-extrabold text-slate-900 text-lg sm:text-xl leading-none">Město 2050</h1>
+                            <span id="badge-difficulty" class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">Normální</span>
+                        </div>
+                        <p class="text-xs text-slate-500 mt-1">Mandát starosty • Fáze plánování rozpočtu</p>
+                    </div>
+                </div>
+
+                <!-- Ukazatel kola a roku -->
+                <div class="flex items-center gap-2 sm:gap-4 bg-slate-900 text-white px-4 py-2 rounded-xl">
+                    <div class="text-right">
+                        <div class="text-[11px] uppercase tracking-wider text-slate-400">Období</div>
+                        <div class="font-bold text-sm sm:text-base"><span id="stat-round">1</span> / 12</div>
+                    </div>
+                    <div class="h-7 w-px bg-slate-700"></div>
+                    <div>
+                        <div class="text-[11px] uppercase tracking-wider text-emerald-400">Aktuální rok</div>
+                        <div class="font-extrabold text-lg sm:text-xl text-emerald-300 leading-none" id="stat-year">2026</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 5 HLAVNÍCH METRIK -->
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-3">
+                <!-- Rozpočet -->
+                <div class="bg-amber-50/70 border border-amber-200/80 rounded-xl p-2.5 sm:p-3">
+                    <div class="flex items-center justify-between text-xs font-semibold text-amber-900 mb-1">
+                        <span>💰 Rozpočet</span>
+                        <span class="text-[11px] text-emerald-700 font-bold" id="stat-income-badge">+25 mil./kolo</span>
+                    </div>
+                    <div class="text-xl sm:text-2xl font-extrabold text-slate-900" id="stat-budget">110 mil. Kč</div>
+                    <div class="text-[11px] text-slate-500 mt-0.5">Dostupné finance</div>
+                </div>
+
+                <!-- Klimatická odolnost -->
+                <div class="bg-sky-50/70 border border-sky-200/80 rounded-xl p-2.5 sm:p-3">
+                    <div class="flex items-center justify-between text-xs font-semibold text-sky-900 mb-1">
+                        <span>🛡️ Klimatická odolnost</span>
+                        <span class="font-extrabold" id="stat-resilience-text">30 %</span>
+                    </div>
+                    <div class="w-full bg-sky-200/70 h-2.5 rounded-full overflow-hidden my-1.5">
+                        <div id="bar-resilience" class="bg-sky-600 h-full rounded-full transition-all duration-500" style="width: 30%"></div>
+                    </div>
+                    <div class="text-[11px] text-slate-500">Ochrana před extrémy</div>
+                </div>
+
+                <!-- Spokojenost obyvatel -->
+                <div class="bg-rose-50/70 border border-rose-200/80 rounded-xl p-2.5 sm:p-3">
+                    <div class="flex items-center justify-between text-xs font-semibold text-rose-900 mb-1">
+                        <span>😊 Spokojenost</span>
+                        <span class="font-extrabold" id="stat-happiness-text">60 %</span>
+                    </div>
+                    <div class="w-full bg-rose-200/70 h-2.5 rounded-full overflow-hidden my-1.5">
+                        <div id="bar-happiness" class="bg-rose-500 h-full rounded-full transition-all duration-500" style="width: 60%"></div>
+                    </div>
+                    <div class="text-[11px] text-slate-500">Podpora voličů</div>
+                </div>
+
+                <!-- Uhlíková neutralita / Ekologie -->
+                <div class="bg-emerald-50/70 border border-emerald-200/80 rounded-xl p-2.5 sm:p-3">
+                    <div class="flex items-center justify-between text-xs font-semibold text-emerald-900 mb-1">
+                        <span>🌱 Ekologie a klima</span>
+                        <span class="font-extrabold" id="stat-ecology-text">25 %</span>
+                    </div>
+                    <div class="w-full bg-emerald-200/70 h-2.5 rounded-full overflow-hidden my-1.5">
+                        <div id="bar-ecology" class="bg-emerald-600 h-full rounded-full transition-all duration-500" style="width: 25%"></div>
+                    </div>
+                    <div class="text-[11px] text-slate-500">Cesta k neutralitě</div>
+                </div>
+
+                <!-- Ekonomika / Příjmy -->
+                <div class="col-span-2 sm:col-span-1 bg-indigo-50/70 border border-indigo-200/80 rounded-xl p-2.5 sm:p-3">
+                    <div class="flex items-center justify-between text-xs font-semibold text-indigo-900 mb-1">
+                        <span>📈 Ekonomická síla</span>
+                        <span class="font-extrabold" id="stat-economy-text">25 mil.</span>
+                    </div>
+                    <div class="w-full bg-indigo-200/70 h-2.5 rounded-full overflow-hidden my-1.5">
+                        <div id="bar-economy" class="bg-indigo-600 h-full rounded-full transition-all duration-500" style="width: 50%"></div>
+                    </div>
+                    <div class="text-[11px] text-slate-500">Příjem do dalšího kola</div>
+                </div>
+            </div>
+        </header>
+
+        <!-- STŘEDNÍ A SPODNÍ SEKCE: VIZUALIZACE MĚSTA + DENÍK + INVESTICE -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 flex-1">
+
+            <!-- LEVÝ / HORNÍ SLOUPEC: INTERAKTIVNÍ PANORAMA MĚSTA + DENÍK (5 sloupců na desktopu) -->
+            <div class="lg:col-span-5 flex flex-col gap-4">
+
+                <!-- VIZUÁLNÍ PANORAMA MĚSTA (SVG) -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
+                    <div class="px-4 py-2.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                        <span class="text-xs font-bold uppercase tracking-wider text-slate-600">🏙️ Živý pohled na město</span>
+                        <span id="city-status-label" class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-200 text-slate-700">Rozvíjející se město</span>
+                    </div>
+
+                    <div class="relative w-full aspect-[16/10] bg-sky-200 overflow-hidden">
+                        <svg id="city-svg" viewBox="0 0 800 500" class="w-full h-full object-cover" xmlns="http://www.w3.org/2000/svg">
+                            <defs>
+                                <!-- Dynamické přechody oblohy -->
+                                <linearGradient id="skyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                                    <stop id="sky-top" offset="0%" stop-color="#38bdf8" />
+                                    <stop id="sky-bottom" offset="100%" stop-color="#bae6fd" />
+                                </linearGradient>
+                                <linearGradient id="riverGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                                    <stop id="river-color-1" offset="0%" stop-color="#0284c7" />
+                                    <stop id="river-color-2" offset="50%" stop-color="#38bdf8" />
+                                    <stop id="river-color-3" offset="100%" stop-color="#0369a1" />
+                                </linearGradient>
+                                <linearGradient id="groundGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                                    <stop id="ground-top" offset="0%" stop-color="#86efac" />
+                                    <stop id="ground-bottom" offset="100%" stop-color="#4ade80" />
+                                </linearGradient>
+                            </defs>
+
+                            <!-- OBLOHA -->
+                            <rect width="800" height="330" fill="url(#skyGrad)" />
+
+                            <!-- SMOGOVÁ VRSTVA (viditelná při nízké ekologii) -->
+                            <rect id="smog-layer" width="800" height="330" fill="#78716c" opacity="0.25" />
+
+                            <!-- SLUNCE -->
+                            <g class="sun-anim">
+                                <circle cx="680" cy="65" r="42" fill="#fde047" opacity="0.3" />
+                                <circle cx="680" cy="65" r="28" fill="#facc15" />
+                            </g>
+
+                            <!-- MRAKY -->
+                            <g class="cloud-anim" opacity="0.9">
+                                <path d="M110 85 Q125 60 150 70 Q175 50 200 72 Q225 72 225 92 Q225 108 200 108 L115 108 Q95 108 95 93 Q95 82 110 85 Z" fill="#ffffff" />
+                            </g>
+                            <g class="cloud-anim-slow" opacity="0.85">
+                                <path d="M410 65 Q425 45 445 55 Q468 38 490 58 Q510 58 510 75 Q510 88 490 88 L415 88 Q398 88 398 76 Q398 65 410 65 Z" fill="#ffffff" />
+                            </g>
+
+                            <!-- VZDÁLENÉ KOPCE -->
+                            <path d="M0 290 Q180 210 380 275 T800 250 L800 340 L0 340 Z" fill="#65a30d" opacity="0.6" />
+                            <path d="M0 305 Q250 245 520 295 T800 275 L800 340 L0 340 Z" fill="#4d7c0f" opacity="0.7" />
+
+                            <!-- PRŮMYSLOVÁ ZÓNA V POZADÍ (dynamická podle investice) -->
+                            <g id="svg-industry" opacity="0.85">
+                                <rect x="45" y="215" width="75" height="85" fill="#475569" rx="3" />
+                                <rect x="60" y="170" width="14" height="45" fill="#334155" />
+                                <rect x="88" y="180" width="14" height="35" fill="#334155" />
+                                <!-- Kouř z komínů -->
+                                <circle id="factory-smoke-1" cx="67" cy="155" r="10" fill="#cbd5e1" opacity="0.7" />
+                                <circle id="factory-smoke-2" cx="76" cy="138" r="14" fill="#cbd5e1" opacity="0.5" />
+                                <circle id="factory-smoke-3" cx="95" cy="165" r="9" fill="#cbd5e1" opacity="0.6" />
+                            </g>
+
+                            <!-- ZEMĚ / KRAJINA -->
+                            <rect y="295" width="800" height="205" fill="url(#groundGrad)" />
+
+                            <!-- RETENČNÍ NÁDRŽ / MOKŘAD (zobrazí se po investici) -->
+                            <g id="svg-wetland" class="hidden">
+                                <ellipse cx="145" cy="365" rx="75" ry="26" fill="#0ea5e9" stroke="#38bdf8" stroke-width="3" />
+                                <ellipse cx="145" cy="365" rx="55" ry="16" fill="#38bdf8" opacity="0.6" />
+                                <!-- Rákosí -->
+                                <path d="M85 360 L82 342 M90 362 L92 344 M205 358 L208 340 M200 361 L197 345" stroke="#15803d" stroke-width="2.5" stroke-linecap="round" />
+                            </g>
+
+                            <!-- HLAVNÍ BUDOVY MĚSTA (CENTRUM) -->
+                            <g id="svg-buildings">
+                                <!-- Budova 1 (vlevo) -->
+                                <rect x="235" y="195" width="68" height="125" fill="#e2e8f0" stroke="#94a3b8" stroke-width="2" rx="4" />
+                                <g fill="#38bdf8" opacity="0.8">
+                                    <rect x="247" y="210" width="14" height="16" rx="2" /><rect x="275" y="210" width="14" height="16" rx="2" />
+                                    <rect x="247" y="236" width="14" height="16" rx="2" /><rect x="275" y="236" width="14" height="16" rx="2" />
+                                    <rect x="247" y="262" width="14" height="16" rx="2" /><rect x="275" y="262" width="14" height="16" rx="2" />
+                                </g>
+
+                                <!-- Budova 2 (vysoká radnice / kanceláře uprostřed) -->
+                                <rect x="320" y="150" width="84" height="170" fill="#f8fafc" stroke="#94a3b8" stroke-width="2" rx="4" />
+                                <g fill="#0284c7" opacity="0.85">
+                                    <rect x="334" y="168" width="18" height="18" rx="2" /><rect x="370" y="168" width="18" height="18" rx="2" />
+                                    <rect x="334" y="198" width="18" height="18" rx="2" /><rect x="370" y="198" width="18" height="18" rx="2" />
+                                    <rect x="334" y="228" width="18" height="18" rx="2" /><rect x="370" y="228" width="18" height="18" rx="2" />
+                                    <rect x="334" y="258" width="18" height="18" rx="2" /><rect x="370" y="258" width="18" height="18" rx="2" />
+                                </g>
+
+                                <!-- Budova 3 (bytový dům vpravo) -->
+                                <rect x="422" y="185" width="76" height="135" fill="#cbd5e1" stroke="#64748b" stroke-width="2" rx="4" />
+                                <g fill="#38bdf8" opacity="0.8">
+                                    <rect x="435" y="202" width="16" height="16" rx="2" /><rect x="468" y="202" width="16" height="16" rx="2" />
+                                    <rect x="435" y="230" width="16" height="16" rx="2" /><rect x="468" y="230" width="16" height="16" rx="2" />
+                                    <rect x="435" y="258" width="16" height="16" rx="2" /><rect x="468" y="258" width="16" height="16" rx="2" />
+                                </g>
+
+                                <!-- Budova 4 (menší veřejná budova vpravo) -->
+                                <rect x="516" y="225" width="82" height="95" fill="#f1f5f9" stroke="#94a3b8" stroke-width="2" rx="4" />
+                                <g fill="#0ea5e9" opacity="0.8">
+                                    <rect x="530" y="242" width="20" height="18" rx="2" /><rect x="564" y="242" width="20" height="18" rx="2" />
+                                    <rect x="530" y="272" width="20" height="18" rx="2" /><rect x="564" y="272" width="20" height="18" rx="2" />
+                                </g>
+                            </g>
+
+                            <!-- ZELENÉ STŘECHY A FASÁDY (dynamicky přibývají) -->
+                            <g id="svg-green-roofs" class="hidden">
+                                <rect x="233" y="189" width="72" height="8" rx="4" fill="#16a34a" />
+                                <rect x="318" y="144" width="88" height="8" rx="4" fill="#15803d" />
+                                <rect x="420" y="179" width="80" height="8" rx="4" fill="#16a34a" />
+                                <!-- Popínavá zeleň na fasádách -->
+                                <path d="M324 152 Q330 210 322 280" stroke="#22c55e" stroke-width="4" fill="none" stroke-linecap="round" />
+                                <path d="M492 187 Q486 240 494 300" stroke="#16a34a" stroke-width="4" fill="none" stroke-linecap="round" />
+                            </g>
+
+                            <!-- SOLÁRNÍ PANELY NA STŘECHÁCH (dynamicky přibývají) -->
+                            <g id="svg-solar" class="hidden">
+                                <polygon points="328,144 352,132 362,144" fill="#1e3a8a" stroke="#93c5fd" stroke-width="1.5" />
+                                <polygon points="366,144 390,132 400,144" fill="#1e3a8a" stroke="#93c5fd" stroke-width="1.5" />
+                                <polygon points="524,225 552,213 562,225" fill="#1e3a8a" stroke="#93c5fd" stroke-width="1.5" />
+                                <polygon points="564,225 590,213 598,225" fill="#1e3a8a" stroke="#93c5fd" stroke-width="1.5" />
+                            </g>
+
+                            <!-- SILNICE A PROPUSTNÉ POVRCHY -->
+                            <rect id="svg-road" x="0" y="320" width="800" height="24" fill="#475569" />
+                            <line x1="0" y1="332" x2="800" y2="332" stroke="#f8fafc" stroke-width="2" stroke-dasharray="16,14" />
+
+                            <!-- ELEKTROBUS / MHD (zobrazí se po investici do MHD) -->
+                            <g id="svg-ev-bus" class="hidden">
+                                <rect x="355" y="306" width="56" height="20" rx="5" fill="#10b981" stroke="#065f46" stroke-width="1.5" />
+                                <rect x="362" y="310" width="12" height="7" rx="1" fill="#ecfdf5" />
+                                <rect x="378" y="310" width="12" height="7" rx="1" fill="#ecfdf5" />
+                                <rect x="394" y="310" width="12" height="7" rx="1" fill="#ecfdf5" />
+                                <circle cx="367" cy="327" r="4.5" fill="#1e293b" />
+                                <circle cx="399" cy="327" r="4.5" fill="#1e293b" />
+                            </g>
+
+                            <!-- ŘEKA V POPŘEDÍ -->
+                            <path id="svg-river" class="river-anim" d="M0 415 Q200 390 400 420 T800 405 L800 500 L0 500 Z" fill="url(#riverGrad)" />
+
+                            <!-- PROTIPOVODŇOVÉ ZÁBRANY U ŘEKY -->
+                            <g id="svg-flood-wall" class="hidden">
+                                <path d="M0 406 Q200 381 400 411 T800 396" fill="none" stroke="#94a3b8" stroke-width="6" stroke-dasharray="18,3" />
+                            </g>
+
+                            <!-- MĚSTSKÉ PARKY A ALEJE STROMŮ (postupně přibývají 3 úrovně) -->
+                            <!-- Úroveň 1: Základní stromy -->
+                            <g id="svg-trees-1">
+                                <g transform="translate(215, 315)">
+                                    <rect x="-3" y="-12" width="6" height="14" fill="#78350f" />
+                                    <circle cx="0" cy="-22" r="15" fill="#16a34a" />
+                                </g>
+                                <g transform="translate(625, 315)">
+                                    <rect x="-3" y="-12" width="6" height="14" fill="#78350f" />
+                                    <circle cx="0" cy="-22" r="16" fill="#15803d" />
+                                </g>
+                            </g>
+                            <!-- Úroveň 2: Další aleje -->
+                            <g id="svg-trees-2" class="hidden">
+                                <g transform="translate(308, 316)">
+                                    <rect x="-3" y="-12" width="6" height="14" fill="#78350f" />
+                                    <circle cx="0" cy="-20" r="14" fill="#22c55e" />
+                                </g>
+                                <g transform="translate(508, 316)">
+                                    <rect x="-3" y="-12" width="6" height="14" fill="#78350f" />
+                                    <circle cx="0" cy="-20" r="14" fill="#16a34a" />
+                                </g>
+                                <g transform="translate(665, 315)">
+                                    <rect x="-3" y="-14" width="6" height="16" fill="#78350f" />
+                                    <circle cx="0" cy="-25" r="18" fill="#15803d" />
+                                </g>
+                            </g>
+                            <!-- Úroveň 3: Bohatý park u řeky -->
+                            <g id="svg-trees-3" class="hidden">
+                                <g transform="translate(260, 385)">
+                                    <rect x="-3" y="-14" width="6" height="16" fill="#78350f" />
+                                    <circle cx="0" cy="-24" r="17" fill="#22c55e" />
+                                </g>
+                                <g transform="translate(310, 392)">
+                                    <rect x="-3" y="-12" width="6" height="14" fill="#78350f" />
+                                    <circle cx="0" cy="-20" r="15" fill="#16a34a" />
+                                </g>
+                                <g transform="translate(550, 385)">
+                                    <rect x="-3" y="-14" width="6" height="16" fill="#78350f" />
+                                    <circle cx="0" cy="-24" r="18" fill="#15803d" />
+                                </g>
+                                <g transform="translate(715, 365)">
+                                    <rect x="-4" y="-16" width="8" height="18" fill="#78350f" />
+                                    <circle cx="0" cy="-28" r="21" fill="#22c55e" />
+                                </g>
+                            </g>
+
+                            <!-- EFEKT POČASÍ (Déšť / Vichřice / Horko - aktivuje se při události) -->
+                            <g id="weather-rain" class="hidden" stroke="#38bdf8" stroke-width="2" stroke-linecap="round">
+                                <line x1="100" y1="20" x2="90" y2="55" class="rain-drop" />
+                                <line x1="200" y1="50" x2="190" y2="85" class="rain-drop" style="animation-delay: 0.2s" />
+                                <line x1="320" y1="10" x2="310" y2="45" class="rain-drop" style="animation-delay: 0.4s" />
+                                <line x1="450" y1="40" x2="440" y2="75" class="rain-drop" style="animation-delay: 0.1s" />
+                                <line x1="580" y1="15" x2="570" y2="50" class="rain-drop" style="animation-delay: 0.5s" />
+                                <line x1="700" y1="45" x2="690" y2="80" class="rain-drop" style="animation-delay: 0.3s" />
+                            </g>
+                            <rect id="weather-heat" class="hidden" width="800" height="500" fill="#f97316" opacity="0.22" />
+                        </svg>
+
+                        <!-- Rychlý přehled aktivních prvků ve městě -->
+                        <div class="absolute bottom-2 left-2 right-2 flex flex-wrap gap-1.5 pointer-events-none" id="active-features-badges">
+                            <!-- Dynamicky doplněno JS -->
+                        </div>
+                    </div>
+
+                    <!-- AKČNÍ TLAČÍTKO PRO UKONČENÍ INVESTIČNÍ FÁZE -->
+                    <div class="p-3 sm:p-4 bg-slate-900 text-white flex flex-col gap-3">
+                        <!-- Ukazatel povinného strategického milníku (investice do všech 3 sekcí) -->
+                        <div id="pillar-requirement-banner" class="p-2.5 rounded-xl bg-slate-800/90 border border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <span class="text-[11px] font-semibold text-slate-300" id="pillar-req-title">🎯 Podmínka vyváženého rozvoje (min. 1× v každé sekci):</span>
+                            <div class="flex flex-wrap gap-1.5" id="pillar-badges">
+                                <span id="req-badge-bluegreen" class="px-2 py-0.5 rounded-md text-[11px] font-bold bg-slate-700 text-slate-300 border border-slate-600">🌿 Modrozelená ✗</span>
+                                <span id="req-badge-greyenergy" class="px-2 py-0.5 rounded-md text-[11px] font-bold bg-slate-700 text-slate-300 border border-slate-600">⚡ Šedá a energie ✗</span>
+                                <span id="req-badge-socecon" class="px-2 py-0.5 rounded-md text-[11px] font-bold bg-slate-700 text-slate-300 border border-slate-600">🏛️ Společnost ✗</span>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
+                            <div class="text-xs text-slate-300 text-center sm:text-left">
+                                <span class="block font-semibold text-white" id="next-phase-hint-title">Hotovo s investicemi pro rok <span id="btn-current-year">2026</span>?</span>
+                                <span id="next-phase-hint-sub">Nevyčerpaný rozpočet se převádí do dalšího období.</span>
+                            </div>
+                            <button id="btn-end-investment" onclick="endInvestmentPhase()"
+                                class="w-full sm:w-auto whitespace-nowrap px-5 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-extrabold text-sm shadow-lg shadow-emerald-500/20 transition transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer">
+                                ⏭️ Přejít k událostem (<span id="btn-next-year">2028</span>)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- KRONIKA STAROSTY / DENÍK UDÁLOSTÍ -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 flex-1 flex flex-col min-h-[180px] max-h-[280px]">
+                    <div class="flex items-center justify-between pb-2 mb-2 border-b border-slate-100">
+                        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-600">📜 Kronika starosty</h3>
+                        <span id="log-count" class="text-[11px] font-semibold text-slate-400">0 záznamů</span>
+                    </div>
+                    <div id="event-log" class="space-y-2 overflow-y-auto pr-1 text-xs flex-1">
+                        <!-- Dynamicky generováno JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- PRAVÝ SLOUPEC: INVESTICE A ROZVOJ INFRASTRUKTURY (7 sloupců na desktopu) -->
+            <div class="lg:col-span-7 bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-5 flex flex-col">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 mb-4 border-b border-slate-100">
+                    <div>
+                        <h2 class="font-extrabold text-lg text-slate-900">🏗️ Fáze 1: Investice a rozvoj města</h2>
+                        <p class="text-xs text-slate-500">Vylepšujte městskou infrastrukturu (úrovně 0 až 3) a připravte město na budoucnost.</p>
+                    </div>
+                </div>
+
+                <!-- PŘEPÍNAČ KATEGORIÍ (TABY) -->
+                <div class="grid grid-cols-3 gap-2 mb-4 bg-slate-100 p-1.5 rounded-xl">
+                    <button onclick="switchTab('bluegreen')" id="tab-bluegreen"
+                        class="tab-btn py-2 px-2 sm:px-3 rounded-lg font-bold text-xs sm:text-sm transition bg-white text-emerald-700 shadow-sm cursor-pointer">
+                        🌿 Modrozelená
+                    </button>
+                    <button onclick="switchTab('greyenergy')" id="tab-greyenergy"
+                        class="tab-btn py-2 px-2 sm:px-3 rounded-lg font-bold text-xs sm:text-sm transition text-slate-600 hover:text-slate-900 cursor-pointer">
+                        ⚡ Šedá a energie
+                    </button>
+                    <button onclick="switchTab('socecon')" id="tab-socecon"
+                        class="tab-btn py-2 px-2 sm:px-3 rounded-lg font-bold text-xs sm:text-sm transition text-slate-600 hover:text-slate-900 cursor-pointer">
+                        🏛️ Společnost a ekon.
+                    </button>
+                </div>
+
+                <!-- SEZNAM PROJEKTŮ V AKTIVNÍ KATEGORII -->
+                <div id="projects-container" class="grid grid-cols-1 md:grid-cols-2 gap-3.5 overflow-y-auto pr-1">
+                    <!-- Dynamicky generováno JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== MODÁLNÍ OKNO: FÁZE 2 – KLIMATICKÁ / MĚSTSKÁ UDÁLOST ==================== -->
+    <div id="event-modal" class="hidden fixed inset-0 z-40 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+        <div class="max-w-xl w-full bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden my-auto transform transition-all">
+            <!-- Barevná hlavička události -->
+            <div id="event-modal-header" class="p-5 sm:p-6 bg-gradient-to-r from-amber-600 to-orange-600 text-white">
+                <div class="flex items-center justify-between text-xs font-bold uppercase tracking-wider opacity-90 mb-1">
+                    <span id="event-modal-badge">⚠️ Fáze 2: Klimatická událost</span>
+                    <span id="event-modal-year">Rok 2028</span>
+                </div>
+                <h2 id="event-modal-title" class="text-2xl sm:text-3xl font-extrabold flex items-center gap-2">
+                    ☀️ Extrémní vlna veder
+                </h2>
+            </div>
+
+            <div class="p-5 sm:p-6 space-y-4">
+                <p id="event-modal-desc" class="text-slate-700 text-sm sm:text-base leading-relaxed">
+                    Popis události...
+                </p>
+
+                <!-- Vyhodnocení připravenosti města -->
+                <div id="event-evaluation-box" class="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-sm space-y-2">
+                    <div class="font-bold text-slate-900 flex items-center gap-1.5">
+                        <span>📊 Analýza připravenosti města:</span>
+                    </div>
+                    <p id="event-evaluation-text" class="text-slate-600 text-xs sm:text-sm leading-relaxed"></p>
+                    <div id="event-impacts-pills" class="flex flex-wrap gap-2 pt-1"></div>
+                </div>
+
+                <!-- Okamžité volby starosty (pokud událost nabízí reakci) -->
+                <div id="event-choices-container" class="space-y-2.5 pt-1">
+                    <!-- Dynamicky generovaná tlačítka voleb -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== MODÁLNÍ OKNO: KONEC HRY (3 SCÉNÁŘE) ==================== -->
+    <div id="gameover-modal" class="hidden fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+        <div class="max-w-2xl w-full bg-white rounded-3xl shadow-2xl overflow-hidden my-auto border border-slate-200">
+            <div id="gameover-header" class="p-6 sm:p-8 text-white bg-gradient-to-r from-emerald-600 to-teal-700">
+                <div class="inline-block px-3 py-1 rounded-full bg-white/20 text-xs font-bold uppercase tracking-wider mb-2" id="gameover-badge">
+                    Konec mandátu • Rok 2050
+                </div>
+                <h2 id="gameover-title" class="text-2xl sm:text-4xl font-extrabold mb-2">
+                    Zelené a odolné město budoucnosti!
+                </h2>
+                <p id="gameover-subtitle" class="text-sm sm:text-base opacity-90">
+                    Pod vaším vedením město zvládlo všechny klimatické nástrahy.
+                </p>
+            </div>
+
+            <div class="p-6 sm:p-8 space-y-6">
+                <!-- Finální statistiky -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+                    <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200">
+                        <div class="text-xs text-slate-500">Odolnost</div>
+                        <div class="text-xl font-extrabold text-sky-600" id="end-resilience">85 %</div>
+                    </div>
+                    <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200">
+                        <div class="text-xs text-slate-500">Spokojenost</div>
+                        <div class="text-xl font-extrabold text-rose-600" id="end-happiness">80 %</div>
+                    </div>
+                    <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200">
+                        <div class="text-xs text-slate-500">Ekologie</div>
+                        <div class="text-xl font-extrabold text-emerald-600" id="end-ecology">90 %</div>
+                    </div>
+                    <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200">
+                        <div class="text-xs text-slate-500">Rozpočet</div>
+                        <div class="text-xl font-extrabold text-amber-600" id="end-budget">45 mil.</div>
+                    </div>
+                </div>
+
+                <!-- Podrobné zhodnocení a tipy -->
+                <div class="space-y-2">
+                    <h3 class="font-bold text-slate-900 text-sm uppercase tracking-wider">Závěrečná zpráva komise:</h3>
+                    <p id="gameover-analysis" class="text-slate-700 text-sm leading-relaxed bg-slate-50 p-4 rounded-2xl border border-slate-200"></p>
+                </div>
+
+                <!-- Získané odznaky / úspěchy -->
+                <div id="gameover-badges-section" class="space-y-2">
+                    <h3 class="font-bold text-slate-900 text-sm uppercase tracking-wider">Získaná ocenění starosty:</h3>
+                    <div id="gameover-badges" class="flex flex-wrap gap-2"></div>
+                </div>
+
+                <button onclick="resetToMenu()"
+                    class="w-full py-4 px-6 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-base shadow-lg transition cursor-pointer">
+                    🔄 Hrát znovu s novou strategií
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFIKACE (místo alertu) -->
+    <div id="toast-box" class="fixed bottom-4 right-4 z-50 pointer-events-none transition-all duration-300 opacity-0 translate-y-3">
+        <div id="toast-content" class="bg-slate-900 text-white px-4 py-3 rounded-xl shadow-xl text-sm font-medium border border-slate-700"></div>
+    </div>
+
+    <script>
+        /* ==================== DATA PROJEKTŮ A INFRASTRUKTURY ==================== */
+        const PROJECTS_DATA = [
+            // 1. MODROZELENÁ INFRASTRUKTURA
+            {
+                id: 'parks',
+                category: 'bluegreen',
+                name: 'Městské parky a uliční aleje',
+                icon: '🌳',
+                desc: 'Výsadba vzrostlých stromů ochlazuje ulice až o 4 °C, čistí vzduch a zlepšuje psychickou pohodu obyvatel.',
+                baseCost: 14,
+                costStep: 6,
+                maxLevel: 3,
+                effects: { resilience: 8, happiness: 7, ecology: 9, economy: 0 },
+                synergyTag: 'heat_shield'
+            },
+            {
+                id: 'green_roofs',
+                category: 'bluegreen',
+                name: 'Zelené střechy a fasády',
+                icon: '🏢',
+                desc: 'Vegetace na střechách veřejných i bytových domů zadržuje srážky a brání přehřívání budov v létě.',
+                baseCost: 12,
+                costStep: 5,
+                maxLevel: 3,
+                effects: { resilience: 7, happiness: 4, ecology: 8, economy: 1 },
+                synergyTag: 'heat_shield'
+            },
+            {
+                id: 'wetlands',
+                category: 'bluegreen',
+                name: 'Retenční nádrže a mokřady',
+                icon: '💧',
+                desc: 'Přírodní nádrže zachytávají přívalovou vodu při bouřkách a v období sucha postupně zavlažují krajinu.',
+                baseCost: 16,
+                costStep: 7,
+                maxLevel: 3,
+                effects: { resilience: 11, happiness: 4, ecology: 9, economy: 0 },
+                synergyTag: 'water_retention'
+            },
+            {
+                id: 'permeable',
+                category: 'bluegreen',
+                name: 'Propustné povrchy a dešťové zahrady',
+                icon: '🌧️',
+                desc: 'Náhrada nepropustného asfaltu na parkovištích a chodnících umožňuje vsakování deště přímo do půdy.',
+                baseCost: 11,
+                costStep: 5,
+                maxLevel: 3,
+                effects: { resilience: 9, happiness: 3, ecology: 6, economy: 0 },
+                synergyTag: 'water_retention'
+            },
+            {
+                id: 'river',
+                category: 'bluegreen',
+                name: 'Revitalizace městské řeky',
+                icon: '🏞️',
+                desc: 'Obnova přirozených meandrů a lužního lesa zvyšuje retenční kapacitu řeky a tvoří oblíbenou rekreační zónu.',
+                baseCost: 18,
+                costStep: 8,
+                maxLevel: 3,
+                effects: { resilience: 10, happiness: 8, ecology: 10, economy: 1 },
+                synergyTag: 'flood_protection'
+            },
+
+            // 2. ŠEDÁ A ENERGETICKÁ INFRASTRUKTURA
+            {
+                id: 'solar',
+                category: 'greyenergy',
+                name: 'Komunitní solární elektrárny',
+                icon: '☀️',
+                desc: 'Fotovoltaika na školách, úřadech a halách snižuje emise CO₂ i výdaje města za elektřinu.',
+                baseCost: 15,
+                costStep: 6,
+                maxLevel: 3,
+                effects: { resilience: 5, happiness: 3, ecology: 11, economy: 3 },
+                synergyTag: 'energy_indep'
+            },
+            {
+                id: 'insulation',
+                category: 'greyenergy',
+                name: 'Zateplení a pasivní standard budov',
+                icon: '🧱',
+                desc: 'Modernizace škol, nemocnic a bytů šetří energie v zimě i v létě a chrání obyvatele před energetickou chudobou.',
+                baseCost: 14,
+                costStep: 6,
+                maxLevel: 3,
+                effects: { resilience: 6, happiness: 6, ecology: 8, economy: 2 },
+                synergyTag: 'energy_indep'
+            },
+            {
+                id: 'ev_transit',
+                category: 'greyenergy',
+                name: 'Elektromobilita a bezemisní MHD',
+                icon: '🚌',
+                desc: 'Čisté elektrobusy, cyklostezky a dobíjecí stanice výrazně snižují smog a hluk v centru města.',
+                baseCost: 16,
+                costStep: 7,
+                maxLevel: 3,
+                effects: { resilience: 3, happiness: 8, ecology: 10, economy: 1 },
+                synergyTag: 'clean_air'
+            },
+            {
+                id: 'flood_barriers',
+                category: 'greyenergy',
+                name: 'Mobilní protipovodňové zábrany',
+                icon: '🚧',
+                desc: 'Technická ochrana nábřeží a kritické infrastruktury před stoletou vodou.',
+                baseCost: 15,
+                costStep: 6,
+                maxLevel: 3,
+                effects: { resilience: 10, happiness: 2, ecology: -1, economy: 0 },
+                synergyTag: 'flood_protection'
+            },
+            {
+                id: 'sewage',
+                category: 'greyenergy',
+                name: 'Modernizace kanalizace a čističky',
+                icon: '🚰',
+                desc: 'Oddělení dešťové a splaškové kanalizace brání zahlcení sítě při přívalových deštích a umožňuje recyklaci šedé vody.',
+                baseCost: 14,
+                costStep: 6,
+                maxLevel: 3,
+                effects: { resilience: 9, happiness: 3, ecology: 5, economy: 0 },
+                synergyTag: 'water_retention'
+            },
+
+            // 3. SPOLEČNOST A EKONOMIKA
+            {
+                id: 'local_biz',
+                category: 'socecon',
+                name: 'Podpora zelených inovací a firem',
+                icon: '💡',
+                desc: 'Inovační inkubátor a podpora místních podnikatelů dlouhodobě zvyšují daňové příjmy města.',
+                baseCost: 16,
+                costStep: 7,
+                maxLevel: 3,
+                effects: { resilience: 2, happiness: 5, ecology: 3, economy: 6 },
+                synergyTag: 'econ_strength'
+            },
+            {
+                id: 'campaigns',
+                category: 'socecon',
+                name: 'Klimatické vzdělávání a osvěta',
+                icon: '📢',
+                desc: 'Zapojení občanů do šetření vodou, třídění odpadu a komunitního kompostování zvyšuje soudržnost města.',
+                baseCost: 9,
+                costStep: 4,
+                maxLevel: 3,
+                effects: { resilience: 4, happiness: 7, ecology: 6, economy: 0 },
+                synergyTag: 'social_cohesion'
+            },
+            {
+                id: 'heat_pumps',
+                category: 'socecon',
+                name: 'Městské dotace na tepelná čerpadla',
+                icon: '♨️',
+                desc: 'Pomoc domácnostem s výměnou starých kotlů na tuhá paliva za čisté vytápění.',
+                baseCost: 13,
+                costStep: 5,
+                maxLevel: 3,
+                effects: { resilience: 4, happiness: 8, ecology: 9, economy: 0 },
+                synergyTag: 'clean_air'
+            },
+            {
+                id: 'industry_zone',
+                category: 'socecon',
+                name: 'Rozšíření průmyslové zóny',
+                icon: '🏭',
+                desc: 'Přiláká velké investory a přinese vysoké příjmy do rozpočtu, ale zatíží životní prostředí a zhorší kvalitu ovzduší.',
+                baseCost: 15,
+                costStep: 6,
+                maxLevel: 3,
+                effects: { resilience: -6, happiness: -4, ecology: -10, economy: 9 },
+                synergyTag: 'heavy_industry'
+            }
+        ];
+
+        const CATEGORY_NAMES = {
+            bluegreen: 'Modrozelená infrastruktura',
+            greyenergy: 'Šedá a energetická infrastruktura',
+            socecon: 'Společnost a ekonomika'
+        };
+
+        /* ==================== KLIMATICKÉ A MĚSTSKÉ UDÁLOSTI ==================== */
+        const EVENTS_POOL = [
+            {
+                id: 'heatwave',
+                title: '☀️ Extrémní vlna veder',
+                badge: '⚠️ Fáze 2: Klimatická událost',
+                headerClass: 'from-amber-600 to-orange-600',
+                weatherEffect: 'heat',
+                desc: 'Teploty v centru města přesáhly 39 °C po dobu dvou týdnů. Rozpálený asfalt a beton vytvářejí tepelný ostrov.',
+                evaluate(state) {
+                    const score = (state.levels.parks || 0) * 2 + (state.levels.green_roofs || 0) * 2 + (state.levels.insulation || 0);
+                    if (score >= 6) {
+                        return {
+                            text: 'Díky vzrostlým parkům, zeleným střechám a zatepleným budovám zůstalo v ulicích příjemné mikroklima. Město vedra zvládlo bez újmy!',
+                            impacts: { resilience: 3, happiness: 4, ecology: 2, budget: 0 }
+                        };
+                    } else if (score >= 3) {
+                        return {
+                            text: 'Částečná zeleň zmírnila nejhorší dopady, ale v husté zástavbě si obyvatelé stěžovali na přehřívání.',
+                            impacts: { resilience: -4, happiness: -5, ecology: 0, budget: -4 }
+                        };
+                    } else {
+                        return {
+                            text: 'Nedostatek zeleně způsobil kritické přehřátí centra. Zdravotnictví a energetika byly na hraně kolapsu!',
+                            impacts: { resilience: -12, happiness: -14, ecology: -3, budget: -10 }
+                        };
+                    }
+                },
+                choices: [
+                    {
+                        label: '💦 Otevřít nouzová chladicí centra a mlžítka (-6 mil. Kč, zmírní dopad na spokojenost)',
+                        cost: 6,
+                        bonus: { resilience: 2, happiness: 8, ecology: 0, budget: -6 }
+                    },
+                    {
+                        label: '📋 Vydat pouze doporučení obyvatelům (0 Kč)',
+                        cost: 0,
+                        bonus: { resilience: 0, happiness: 0, ecology: 0, budget: 0 }
+                    }
+                ]
+            },
+            {
+                id: 'flash_flood',
+                title: '⛈️ Přívalové deště a blesková povodeň',
+                badge: '⚠️ Fáze 2: Klimatická událost',
+                headerClass: 'from-sky-700 to-blue-900',
+                weatherEffect: 'rain',
+                desc: 'Během tří hodin spadlo 95 mm srážek. Kanalizace i městská řeka jsou pod obrovským tlakem.',
+                evaluate(state) {
+                    const score = (state.levels.wetlands || 0) * 2 + (state.levels.permeable || 0) * 2 + (state.levels.sewage || 0) * 2 + (state.levels.flood_barriers || 0) + (state.levels.river || 0);
+                    if (score >= 8) {
+                        return {
+                            text: 'Retenční nádrže, propustné povrchy i modernizovaná kanalizace zachytily přívalovou vlnu. Centrum zůstalo v suchu!',
+                            impacts: { resilience: 4, happiness: 4, ecology: 2, budget: 0 }
+                        };
+                    } else if (score >= 4) {
+                        return {
+                            text: 'Část vody se podařilo vsáknout, ale několik podjezdů a sklepů bylo zaplaveno.',
+                            impacts: { resilience: -6, happiness: -6, ecology: -1, budget: -7 }
+                        };
+                    } else {
+                        return {
+                            text: 'Nepropustný asfalt proměnil ulice v dravé řeky. Voda poškodila dopravní infrastrukturu i domy!',
+                            impacts: { resilience: -14, happiness: -13, ecology: -4, budget: -14 }
+                        };
+                    }
+                },
+                choices: [
+                    {
+                        label: '🚒 Okamžitá sanace škod a podpora postiženým rodinám (-8 mil. Kč)',
+                        cost: 8,
+                        bonus: { resilience: 4, happiness: 7, ecology: 0, budget: -8 }
+                    },
+                    {
+                        label: '⏳ Odklízet postupně z běžné údržby (0 Kč)',
+                        cost: 0,
+                        bonus: { resilience: -2, happiness: -3, ecology: 0, budget: 0 }
+                    }
+                ]
+            },
+            {
+                id: 'drought',
+                title: '🏜️ Dlouhotrvající letní sucho',
+                badge: '⚠️ Fáze 2: Klimatická událost',
+                headerClass: 'from-yellow-600 to-amber-700',
+                weatherEffect: 'heat',
+                desc: 'Čtyři měsíce téměř nepršelo. Hladina podzemních vod klesá a městská zeleň usychá.',
+                evaluate(state) {
+                    const score = (state.levels.wetlands || 0) * 2 + (state.levels.river || 0) * 2 + (state.levels.campaigns || 0) + (state.levels.sewage || 0);
+                    if (score >= 6) {
+                        return {
+                            text: 'Zásoby vody v mokřadech a revitalizované řece spolu s šetrným chováním obyvatel udržely město svěží i v suchu.',
+                            impacts: { resilience: 3, happiness: 3, ecology: 3, budget: 0 }
+                        };
+                    } else if (score >= 3) {
+                        return {
+                            text: 'Museli jste omezit zalévání parků a napouštění bazénů. Část mladých stromů uschla.',
+                            impacts: { resilience: -5, happiness: -5, ecology: -4, budget: -3 }
+                        };
+                    } else {
+                        return {
+                            text: 'Kritický nedostatek vody donutil město zavést přídělový systém a dovážet vodu v cisternách!',
+                            impacts: { resilience: -12, happiness: -13, ecology: -8, budget: -11 }
+                        };
+                    }
+                },
+                choices: [
+                    {
+                        label: '💧 Dotovat sudy na dešťovku a zavlažování zeleně (-5 mil. Kč)',
+                        cost: 5,
+                        bonus: { resilience: 2, happiness: 4, ecology: 4, budget: -5 }
+                    },
+                    {
+                        label: '🚫 Vyhlásit zákaz odběru povrchové vody (0 Kč)',
+                        cost: 0,
+                        bonus: { resilience: 0, happiness: -3, ecology: 1, budget: 0 }
+                    }
+                ]
+            },
+            {
+                id: 'energy_crisis',
+                title: '⚡ Energetický šok a výpadky sítě',
+                badge: '⚠️ Fáze 2: Ekonomicko-klimatická výzva',
+                headerClass: 'from-indigo-700 to-purple-800',
+                weatherEffect: null,
+                desc: 'Ceny elektřiny a plynu prudce vzrostly a přetížená přenosová soustava hrozí blackouty.',
+                evaluate(state) {
+                    const score = (state.levels.solar || 0) * 2 + (state.levels.insulation || 0) * 2 + (state.levels.heat_pumps || 0);
+                    if (score >= 6) {
+                        return {
+                            text: 'Vlastní komunitní solární elektrárny a zateplené budovy ochránily rozpočet města i peněženky občanů!',
+                            impacts: { resilience: 3, happiness: 5, ecology: 2, budget: 6 }
+                        };
+                    } else if (score >= 3) {
+                        return {
+                            text: 'Částečná energetická soběstačnost zmírnila dopad, ale provoz městských budov se prodražil.',
+                            impacts: { resilience: -3, happiness: -4, ecology: 0, budget: -6 }
+                        };
+                    } else {
+                        return {
+                            text: 'Závislost na drahých fosilních palivech odčerpala městskou kasu a vyvolala nespokojenost domácností!',
+                            impacts: { resilience: -8, happiness: -12, ecology: -3, budget: -14 }
+                        };
+                    }
+                },
+                choices: [
+                    {
+                        label: '🤝 Krizový příspěvek na energie zranitelným domácnostem (-7 mil. Kč)',
+                        cost: 7,
+                        bonus: { resilience: 1, happiness: 9, ecology: 0, budget: -7 }
+                    },
+                    {
+                        label: '💡 Úsporný režim veřejného osvětlení (0 Kč)',
+                        cost: 0,
+                        bonus: { resilience: 0, happiness: -2, ecology: 2, budget: 2 }
+                    }
+                ]
+            },
+            {
+                id: 'smog_inversion',
+                title: '🌫️ Zimní inverze a smogová situace',
+                badge: '⚠️ Fáze 2: Kvalita ovzduší',
+                headerClass: 'from-slate-700 to-zinc-800',
+                weatherEffect: null,
+                desc: 'Teplotní inverze uzavřela nad městem studený vzduch. Koncentrace prachových částic prudce stoupá.',
+                evaluate(state) {
+                    const cleanScore = (state.levels.ev_transit || 0) * 2 + (state.levels.heat_pumps || 0) * 2 + (state.levels.parks || 0);
+                    const penalty = (state.levels.industry_zone || 0) * 2;
+                    const net = cleanScore - penalty;
+                    if (net >= 5) {
+                        return {
+                            text: 'Bezemisní MHD, čisté vytápění a městská zeleň udržely ovzduší v bezpečných limitech i během inverze.',
+                            impacts: { resilience: 2, happiness: 4, ecology: 3, budget: 0 }
+                        };
+                    } else if (net >= 1) {
+                        return {
+                            text: 'Ovzduší se dočasně zhoršilo, citlivé skupiny obyvatel musely omezit pobyt venku.',
+                            impacts: { resilience: -3, happiness: -5, ecology: -3, budget: -2 }
+                        };
+                    } else {
+                        return {
+                            text: 'Kombinace dopravy, lokálních topenišť a průmyslu způsobila těžkou smogovou kalamitu!',
+                            impacts: { resilience: -8, happiness: -12, ecology: -9, budget: -6 }
+                        };
+                    }
+                },
+                choices: [
+                    {
+                        label: '🚌 MHD zdarma po dobu smogové situace (-4 mil. Kč)',
+                        cost: 4,
+                        bonus: { resilience: 1, happiness: 6, ecology: 4, budget: -4 }
+                    },
+                    {
+                        label: '📣 Vyhlásit smogovou regulaci bez kompenzací (0 Kč)',
+                        cost: 0,
+                        bonus: { resilience: 0, happiness: -2, ecology: 1, budget: 0 }
+                    }
+                ]
+            },
+            {
+                id: 'eu_green_grant',
+                title: '🇪🇺 Evropská dotace na udržitelná města',
+                badge: '✨ Fáze 2: Příležitost pro město',
+                headerClass: 'from-emerald-600 to-teal-700',
+                weatherEffect: null,
+                desc: 'Evropský fond vyhlašuje mimořádnou podporu pro města, která aktivně snižují emise a adaptují se na změnu klimatu.',
+                evaluate(state) {
+                    if (state.ecology >= 50 && state.resilience >= 45) {
+                        return {
+                            text: 'Vaše dosavadní projekty splnily nejpřísnější kritéria! Město získává štědrý dotační bonus.',
+                            impacts: { resilience: 2, happiness: 4, ecology: 2, budget: 18 }
+                        };
+                    } else if (state.ecology >= 30) {
+                        return {
+                            text: 'Město dosáhlo na základní podporu pro přípravu nových adaptačních projektů.',
+                            impacts: { resilience: 1, happiness: 2, ecology: 1, budget: 10 }
+                        };
+                    } else {
+                        return {
+                            text: 'Kvůli nízké ekologické připravenosti město na hlavní dotaci nedosáhlo a získalo jen malý příspěvek.',
+                            impacts: { resilience: 0, happiness: -2, ecology: 0, budget: 4 }
+                        };
+                    }
+                },
+                choices: [
+                    {
+                        label: '🚀 Přijmout dotaci a prezentovat úspěchy občanům',
+                        cost: 0,
+                        bonus: { resilience: 0, happiness: 2, ecology: 0, budget: 0 }
+                    }
+                ]
+            }
+        ];
+
+        /* ==================== HERNÍ STAV ==================== */
+        let selectedDifficulty = 'normal';
+        let gameState = {};
+        let toastTimer = null;
+
+        function clamp(val, min, max) {
+            return Math.max(min, Math.min(max, val));
+        }
+
+        function selectDifficulty(diff) {
+            selectedDifficulty = diff;
+            const btnNormal = document.getElementById('diff-normal');
+            const btnHard = document.getElementById('diff-hard');
+
+            if (diff === 'normal') {
+                btnNormal.className = 'diff-btn text-left p-4 rounded-2xl border-2 border-emerald-400 bg-emerald-950/60 transition cursor-pointer';
+                btnHard.className = 'diff-btn text-left p-4 rounded-2xl border-2 border-slate-700 bg-slate-800/50 hover:border-amber-400/60 transition cursor-pointer';
+            } else {
+                btnNormal.className = 'diff-btn text-left p-4 rounded-2xl border-2 border-slate-700 bg-slate-800/50 hover:border-emerald-400/60 transition cursor-pointer';
+                btnHard.className = 'diff-btn text-left p-4 rounded-2xl border-2 border-amber-400 bg-amber-950/50 transition cursor-pointer';
+            }
+        }
+
+        function startGame() {
+            const isHard = selectedDifficulty === 'hard';
+            const initialLevels = {};
+            PROJECTS_DATA.forEach(p => { initialLevels[p.id] = 0; });
+
+            gameState = {
+                difficulty: selectedDifficulty,
+                round: 1,
+                maxRounds: 12,
+                startYear: 2026,
+                budget: isHard ? 85 : 110,
+                resilience: isHard ? 25 : 30,
+                happiness: isHard ? 55 : 60,
+                ecology: isHard ? 20 : 25,
+                economy: isHard ? 22 : 25,
+                levels: initialLevels,
+                activeTab: 'bluegreen',
+                usedEvents: [],
+                logs: []
+            };
+
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('gameover-modal').classList.add('hidden');
+            document.getElementById('game-container').classList.remove('hidden');
+
+            const badgeDiff = document.getElementById('badge-difficulty');
+            if (isHard) {
+                badgeDiff.textContent = 'Klimatická výzva';
+                badgeDiff.className = 'text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800';
+            } else {
+                badgeDiff.textContent = 'Normální';
+                badgeDiff.className = 'text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800';
+            }
+
+            const logContainer = document.getElementById('event-log');
+            logContainer.innerHTML = `
+                <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200/70 text-slate-600">
+                    <strong>Rok 2026:</strong> Ujali jste se úřadu starosty. Máte k dispozici <strong>${gameState.budget} mil. Kč</strong>. Pro vyvážený start zainvestujte alespoň do 1 projektu z každé ze tří sekcí!
+                </div>
+            `;
+            gameState.logs.push('init');
+            document.getElementById('log-count').textContent = '1 záznam';
+
+            switchTab('bluegreen');
+            updateUI();
+        }
+
+        function resetToMenu() {
+            document.getElementById('gameover-modal').classList.add('hidden');
+            document.getElementById('game-container').classList.add('hidden');
+            document.getElementById('start-screen').classList.remove('hidden');
+        }
+
+        function showToast(msg) {
+            const box = document.getElementById('toast-box');
+            const content = document.getElementById('toast-content');
+            content.textContent = msg;
+            box.classList.remove('opacity-0', 'translate-y-3');
+            if (toastTimer) clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => {
+                box.classList.add('opacity-0', 'translate-y-3');
+            }, 3200);
+        }
+
+        function addLog(htmlText, type = 'info') {
+            gameState.logs.push(htmlText);
+            const logContainer = document.getElementById('event-log');
+            const colors = {
+                invest: 'bg-emerald-50/70 border-emerald-200/80 text-slate-700',
+                event: 'bg-amber-50/80 border-amber-200/80 text-slate-800',
+                info: 'bg-slate-50 border-slate-200/70 text-slate-600'
+            };
+            const div = document.createElement('div');
+            div.className = `p-2.5 rounded-xl border ${colors[type] || colors.info}`;
+            div.innerHTML = htmlText;
+            logContainer.prepend(div);
+            document.getElementById('log-count').textContent = `${gameState.logs.length} záznamů`;
+        }
+
+        function switchTab(tabId) {
+            gameState.activeTab = tabId;
+            ['bluegreen', 'greyenergy', 'socecon'].forEach(id => {
+                const btn = document.getElementById('tab-' + id);
+                if (id === tabId) {
+                    btn.className = 'tab-btn py-2 px-2 sm:px-3 rounded-lg font-bold text-xs sm:text-sm transition bg-white text-emerald-700 shadow-sm cursor-pointer';
+                } else {
+                    btn.className = 'tab-btn py-2 px-2 sm:px-3 rounded-lg font-bold text-xs sm:text-sm transition text-slate-600 hover:text-slate-900 cursor-pointer';
+                }
+            });
+            renderProjects();
+        }
+
+        function getProjectCost(project) {
+            const lvl = gameState.levels[project.id];
+            return project.baseCost + (lvl * project.costStep);
+        }
+
+        function getCategoryInvestmentStatus() {
+            const counts = { bluegreen: 0, greyenergy: 0, socecon: 0 };
+            PROJECTS_DATA.forEach(p => {
+                counts[p.category] += (gameState.levels[p.id] || 0);
+            });
+
+            const missing = Object.keys(counts).filter(cat => counts[cat] === 0);
+            const allSatisfied = missing.length === 0;
+
+            let canAffordMissing = true;
+            if (!allSatisfied) {
+                let minTotalNeeded = 0;
+                missing.forEach(cat => {
+                    const catProjects = PROJECTS_DATA.filter(p => p.category === cat && gameState.levels[p.id] < p.maxLevel);
+                    if (catProjects.length > 0) {
+                        const cheapest = Math.min(...catProjects.map(p => getProjectCost(p)));
+                        minTotalNeeded += cheapest;
+                    }
+                });
+                canAffordMissing = gameState.budget >= minTotalNeeded;
+            }
+
+            return { counts, missing, allSatisfied, canAffordMissing };
+        }
+
+        function investInProject(projectId) {
+            const project = PROJECTS_DATA.find(p => p.id === projectId);
+            if (!project) return;
+
+            const currentLvl = gameState.levels[projectId];
+            if (currentLvl >= project.maxLevel) {
+                showToast('ℹ️ Tento projekt je již na maximální úrovni.');
+                return;
+            }
+
+            const cost = getProjectCost(project);
+            if (gameState.budget < cost) {
+                showToast('⚠️ Nedostatek financí v rozpočtu!');
+                return;
+            }
+
+            gameState.budget -= cost;
+            gameState.levels[projectId] = currentLvl + 1;
+
+            gameState.resilience = clamp(gameState.resilience + project.effects.resilience, 0, 100);
+            gameState.happiness = clamp(gameState.happiness + project.effects.happiness, 0, 100);
+            gameState.ecology = clamp(gameState.ecology + project.effects.ecology, 0, 100);
+            gameState.economy = clamp(gameState.economy + project.effects.economy, 5, 80);
+
+            const currentYear = gameState.startYear + (gameState.round - 1) * 2;
+            addLog(`<strong>Rok ${currentYear}:</strong> Investováno do <em>${project.name}</em> (Úroveň ${gameState.levels[projectId]}) za ${cost} mil. Kč.`, 'invest');
+            showToast(`✅ ${project.name} vylepšeno na úroveň ${gameState.levels[projectId]}!`);
+
+            updateUI();
+        }
+
+        function renderProjects() {
+            const container = document.getElementById('projects-container');
+            const filtered = PROJECTS_DATA.filter(p => p.category === gameState.activeTab);
+            const catStatus = getCategoryInvestmentStatus();
+
+            ['bluegreen', 'greyenergy', 'socecon'].forEach(cat => {
+                const tabBtn = document.getElementById('tab-' + cat);
+                const done = catStatus.counts[cat] > 0;
+                const labels = {
+                    bluegreen: '🌿 Modrozelená',
+                    greyenergy: '⚡ Šedá a energie',
+                    socecon: '🏛️ Společnost a ekon.'
+                };
+                tabBtn.innerHTML = `${labels[cat]} <span class="ml-1 text-[11px] ${done ? 'text-emerald-600' : 'text-amber-600'}">${done ? '✓' : '•'}</span>`;
+            });
+
+            container.innerHTML = filtered.map(p => {
+                const lvl = gameState.levels[p.id];
+                const isMax = lvl >= p.maxLevel;
+                const cost = getProjectCost(p);
+                const canAfford = gameState.budget >= cost && !isMax;
+
+                const effectBadges = [];
+                if (p.effects.resilience !== 0) {
+                    const sign = p.effects.resilience > 0 ? '+' : '';
+                    const cls = p.effects.resilience > 0 ? 'bg-sky-50 text-sky-700 border-sky-200' : 'bg-rose-50 text-rose-700 border-rose-200';
+                    effectBadges.push(`<span class="px-1.5 py-0.5 rounded border text-[11px] font-semibold ${cls}">🛡️ ${sign}${p.effects.resilience}%</span>`);
+                }
+                if (p.effects.happiness !== 0) {
+                    const sign = p.effects.happiness > 0 ? '+' : '';
+                    const cls = p.effects.happiness > 0 ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-amber-50 text-amber-700 border-amber-200';
+                    effectBadges.push(`<span class="px-1.5 py-0.5 rounded border text-[11px] font-semibold ${cls}">😊 ${sign}${p.effects.happiness}%</span>`);
+                }
+                if (p.effects.ecology !== 0) {
+                    const sign = p.effects.ecology > 0 ? '+' : '';
+                    const cls = p.effects.ecology > 0 ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-rose-50 text-rose-700 border-rose-200';
+                    effectBadges.push(`<span class="px-1.5 py-0.5 rounded border text-[11px] font-semibold ${cls}">🌱 ${sign}${p.effects.ecology}%</span>`);
+                }
+                if (p.effects.economy !== 0) {
+                    const sign = p.effects.economy > 0 ? '+' : '';
+                    effectBadges.push(`<span class="px-1.5 py-0.5 rounded border text-[11px] font-semibold bg-indigo-50 text-indigo-700 border-indigo-200">📈 ${sign}${p.effects.economy} mil./kolo</span>`);
+                }
+
+                return `
+                    <div class="card-hover p-3.5 rounded-2xl border ${lvl > 0 ? 'border-emerald-300 bg-emerald-50/20' : 'border-slate-200 bg-white'} flex flex-col justify-between gap-3">
+                        <div>
+                            <div class="flex items-start justify-between gap-2 mb-1.5">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-2xl">${p.icon}</span>
+                                    <h3 class="font-bold text-slate-900 text-sm leading-snug">${p.name}</h3>
+                                </div>
+                                <span class="shrink-0 text-[11px] font-extrabold px-2 py-0.5 rounded-full ${lvl > 0 ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600'}">
+                                    Úr. ${lvl}/${p.maxLevel}
+                                </span>
+                            </div>
+                            <p class="text-xs text-slate-600 leading-relaxed mb-2.5">${p.desc}</p>
+                            <div class="flex flex-wrap gap-1">
+                                ${effectBadges.join('')}
+                            </div>
+                        </div>
+                        <button onclick="investInProject('${p.id}')" ${!canAfford ? 'disabled' : ''}
+                            class="w-full py-2 px-3 rounded-xl font-bold text-xs transition flex items-center justify-between ${
+                                isMax
+                                    ? 'bg-emerald-100 text-emerald-800 cursor-default'
+                                    : canAfford
+                                        ? 'bg-slate-900 hover:bg-emerald-600 text-white cursor-pointer shadow-sm'
+                                        : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                            }">
+                            <span>${isMax ? '✅ Maximální úroveň' : '🔨 Investovat'}</span>
+                            <span>${isMax ? 'Hotovo' : cost + ' mil. Kč'}</span>
+                        </button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function updateUI() {
+            const currentYear = gameState.startYear + (gameState.round - 1) * 2;
+            const nextYear = currentYear + 2;
+
+            document.getElementById('stat-round').textContent = gameState.round;
+            document.getElementById('stat-year').textContent = currentYear;
+            document.getElementById('btn-current-year').textContent = currentYear;
+            document.getElementById('btn-next-year').textContent = nextYear;
+
+            document.getElementById('stat-budget').textContent = `${gameState.budget} mil. Kč`;
+            document.getElementById('stat-income-badge').textContent = `+${gameState.economy} mil./kolo`;
+
+            document.getElementById('stat-resilience-text').textContent = `${gameState.resilience} %`;
+            document.getElementById('bar-resilience').style.width = `${gameState.resilience}%`;
+
+            document.getElementById('stat-happiness-text').textContent = `${gameState.happiness} %`;
+            document.getElementById('bar-happiness').style.width = `${gameState.happiness}%`;
+
+            document.getElementById('stat-ecology-text').textContent = `${gameState.ecology} %`;
+            document.getElementById('bar-ecology').style.width = `${gameState.ecology}%`;
+
+            document.getElementById('stat-economy-text').textContent = `${gameState.economy} mil.`;
+            const econPct = clamp((gameState.economy / 55) * 100, 10, 100);
+            document.getElementById('bar-economy').style.width = `${econPct}%`;
+
+            updateRequirementUI();
+            renderProjects();
+            updateCityVisuals();
+        }
+
+        function updateRequirementUI() {
+            const status = getCategoryInvestmentStatus();
+            const badgeConfigs = [
+                { id: 'req-badge-bluegreen', cat: 'bluegreen', icon: '🌿', label: 'Modrozelená' },
+                { id: 'req-badge-greyenergy', cat: 'greyenergy', icon: '⚡', label: 'Šedá a energie' },
+                { id: 'req-badge-socecon', cat: 'socecon', icon: '🏛️', label: 'Společnost' }
+            ];
+
+            badgeConfigs.forEach(cfg => {
+                const el = document.getElementById(cfg.id);
+                const isDone = status.counts[cfg.cat] > 0;
+                if (isDone) {
+                    el.textContent = `${cfg.icon} ${cfg.label} ✓ (${status.counts[cfg.cat]}×)`;
+                    el.className = 'px-2 py-0.5 rounded-md text-[11px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40';
+                } else {
+                    el.textContent = `${cfg.icon} ${cfg.label} ✗`;
+                    el.className = 'px-2 py-0.5 rounded-md text-[11px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40';
+                }
+            });
+
+            const banner = document.getElementById('pillar-requirement-banner');
+            const reqTitle = document.getElementById('pillar-req-title');
+            const endBtn = document.getElementById('btn-end-investment');
+            const hintSub = document.getElementById('next-phase-hint-sub');
+
+            if (status.allSatisfied) {
+                banner.className = 'p-2.5 rounded-xl bg-emerald-950/50 border border-emerald-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-2';
+                reqTitle.textContent = '✅ Vyvážený rozvoj splněn (zainvestováno ve všech 3 sekcích):';
+                reqTitle.className = 'text-[11px] font-semibold text-emerald-300';
+                endBtn.className = 'w-full sm:w-auto whitespace-nowrap px-5 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-extrabold text-sm shadow-lg shadow-emerald-500/20 transition transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer';
+                hintSub.textContent = 'Nevyčerpaný rozpočet se převádí do dalšího období.';
+                hintSub.className = 'text-slate-300';
+            } else {
+                banner.className = 'p-2.5 rounded-xl bg-amber-950/50 border border-amber-500/40 flex flex-col sm:flex-row sm:items-center justify-between gap-2';
+                reqTitle.textContent = '⚠️ Povinný cíl: Zainvestujte alespoň 1× v každé ze 3 sekcí:';
+                reqTitle.className = 'text-[11px] font-semibold text-amber-300';
+                if (status.canAffordMissing) {
+                    endBtn.className = 'w-full sm:w-auto whitespace-nowrap px-5 py-3 rounded-xl bg-slate-700 hover:bg-slate-600 text-amber-200 border border-amber-400/50 font-extrabold text-sm transition cursor-pointer';
+                    hintSub.textContent = `Chybí investice v: ${status.missing.map(c => CATEGORY_NAMES[c]).join(', ')}.`;
+                    hintSub.className = 'text-amber-300 font-medium';
+                } else {
+                    endBtn.className = 'w-full sm:w-auto whitespace-nowrap px-5 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-extrabold text-sm shadow-lg transition cursor-pointer';
+                    hintSub.textContent = 'Nedostatek financí na chybějící sekci – můžete přejít k událostem a doplnit ji v dalším kole.';
+                    hintSub.className = 'text-amber-200';
+                }
+            }
+        }
+
+        function updateCityVisuals() {
+            const L = gameState.levels;
+
+            // Stromy podle úrovně parků
+            document.getElementById('svg-trees-2').classList.toggle('hidden', (L.parks || 0) < 1);
+            document.getElementById('svg-trees-3').classList.toggle('hidden', (L.parks || 0) < 2);
+
+            // Zelené střechy, mokřady, solární panely, elektrobus, zábrany
+            document.getElementById('svg-green-roofs').classList.toggle('hidden', (L.green_roofs || 0) < 1);
+            document.getElementById('svg-wetland').classList.toggle('hidden', (L.wetlands || 0) < 1);
+            document.getElementById('svg-solar').classList.toggle('hidden', (L.solar || 0) < 1);
+            document.getElementById('svg-ev-bus').classList.toggle('hidden', (L.ev_transit || 0) < 1);
+            document.getElementById('svg-flood-wall').classList.toggle('hidden', (L.flood_barriers || 0) < 1);
+
+            // Propustné povrchy změní barvu silnice na světlejší dlažbu
+            const road = document.getElementById('svg-road');
+            road.setAttribute('fill', (L.permeable || 0) >= 1 ? '#64748b' : '#475569');
+
+            // Smog a kouř podle ekologie a průmyslu
+            const smogOpacity = clamp((65 - gameState.ecology + (L.industry_zone || 0) * 12) / 140, 0, 0.55);
+            document.getElementById('smog-layer').setAttribute('opacity', smogOpacity.toFixed(2));
+
+            const smokeOpacity = clamp(0.75 - (gameState.ecology / 110) + (L.industry_zone || 0) * 0.12, 0.05, 0.85);
+            ['factory-smoke-1', 'factory-smoke-2', 'factory-smoke-3'].forEach(id => {
+                document.getElementById(id).setAttribute('opacity', smokeOpacity.toFixed(2));
+            });
+
+            // Stavový štítek města
+            const statusEl = document.getElementById('city-status-label');
+            if (gameState.ecology >= 70 && gameState.resilience >= 70) {
+                statusEl.textContent = '🌿 Zelená metropole budoucnosti';
+                statusEl.className = 'text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800';
+            } else if (gameState.resilience < 35 || gameState.happiness < 35) {
+                statusEl.textContent = '⚠️ Město v ohrožení';
+                statusEl.className = 'text-xs font-semibold px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800';
+            } else {
+                statusEl.textContent = '🏙️ Rozvíjející se město';
+                statusEl.className = 'text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-200 text-slate-700';
+            }
+
+            // Odznaky aktivních prvků na scéně
+            const badges = [];
+            if (L.parks > 0) badges.push(`🌳 Parky (${L.parks})`);
+            if (L.wetlands > 0) badges.push(`💧 Mokřady (${L.wetlands})`);
+            if (L.green_roofs > 0) badges.push(`🏢 Zelené střechy (${L.green_roofs})`);
+            if (L.solar > 0) badges.push(`☀️ Soláry (${L.solar})`);
+            if (L.ev_transit > 0) badges.push(`🚌 E-MHD (${L.ev_transit})`);
+            if (L.flood_barriers > 0) badges.push(`🚧 Zábrany (${L.flood_barriers})`);
+
+            document.getElementById('active-features-badges').innerHTML = badges
+                .map(b => `<span class="px-2 py-0.5 rounded-full bg-slate-900/75 text-white text-[10px] font-semibold backdrop-blur-xs">${b}</span>`)
+                .join('');
+        }
+
+        /* ==================== FÁZE 2: KLIMATICKÉ A MĚSTSKÉ UDÁLOSTI ==================== */
+        function endInvestmentPhase() {
+            const catStatus = getCategoryInvestmentStatus();
+            if (!catStatus.allSatisfied && catStatus.canAffordMissing) {
+                const firstMissing = catStatus.missing[0];
+                switchTab(firstMissing);
+                showToast(`⚠️ Nejprve investujte alespoň do 1 projektu v sekci: ${CATEGORY_NAMES[firstMissing]}!`);
+                return;
+            }
+
+            const eventYear = gameState.startYear + (gameState.round * 2);
+
+            // Výběr události (neopakovat poslední 2 události)
+            const candidates = EVENTS_POOL.filter(ev => !gameState.usedEvents.slice(-2).includes(ev.id));
+            const chosenEvent = candidates[Math.floor(Math.random() * candidates.length)];
+            gameState.usedEvents.push(chosenEvent.id);
+
+            const evalResult = chosenEvent.evaluate(gameState);
+            const hardMultiplier = gameState.difficulty === 'hard' ? 1.3 : 1.0;
+
+            // Úprava negativních dopadů na těžkou obtížnost
+            const scaledImpacts = {
+                resilience: evalResult.impacts.resilience < 0 ? Math.round(evalResult.impacts.resilience * hardMultiplier) : evalResult.impacts.resilience,
+                happiness: evalResult.impacts.happiness < 0 ? Math.round(evalResult.impacts.happiness * hardMultiplier) : evalResult.impacts.happiness,
+                ecology: evalResult.impacts.ecology < 0 ? Math.round(evalResult.impacts.ecology * hardMultiplier) : evalResult.impacts.ecology,
+                budget: evalResult.impacts.budget < 0 ? Math.round(evalResult.impacts.budget * hardMultiplier) : evalResult.impacts.budget
+            };
+
+            // Počasí na SVG
+            document.getElementById('weather-rain').classList.toggle('hidden', chosenEvent.weatherEffect !== 'rain');
+            document.getElementById('weather-heat').classList.toggle('hidden', chosenEvent.weatherEffect !== 'heat');
+
+            // Naplnění modálního okna události
+            const header = document.getElementById('event-modal-header');
+            header.className = `p-5 sm:p-6 bg-gradient-to-r ${chosenEvent.headerClass} text-white`;
+            document.getElementById('event-modal-badge').textContent = chosenEvent.badge;
+            document.getElementById('event-modal-year').textContent = `Rok ${eventYear}`;
+            document.getElementById('event-modal-title').textContent = chosenEvent.title;
+            document.getElementById('event-modal-desc').textContent = chosenEvent.desc;
+            document.getElementById('event-evaluation-text').textContent = evalResult.text;
+
+            const pills = [];
+            const formatPill = (icon, label, val, unit = '%') => {
+                if (val === 0) return;
+                const sign = val > 0 ? '+' : '';
+                const cls = val > 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800';
+                pills.push(`<span class="px-2.5 py-1 rounded-lg text-xs font-bold ${cls}">${icon} ${label}: ${sign}${val}${unit}</span>`);
+            };
+            formatPill('🛡️', 'Odolnost', scaledImpacts.resilience);
+            formatPill('😊', 'Spokojenost', scaledImpacts.happiness);
+            formatPill('🌱', 'Ekologie', scaledImpacts.ecology);
+            formatPill('💰', 'Rozpočet', scaledImpacts.budget, ' mil. Kč');
+
+            document.getElementById('event-impacts-pills').innerHTML = pills.length
+                ? pills.join('')
+                : '<span class="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-200 text-slate-700">Bez přímých ztrát</span>';
+
+            const choicesContainer = document.getElementById('event-choices-container');
+            choicesContainer.innerHTML = chosenEvent.choices.map((ch, idx) => {
+                const disabled = ch.cost > 0 && gameState.budget + scaledImpacts.budget < ch.cost;
+                return `
+                    <button onclick="resolveEventChoice(${idx})" ${disabled ? 'disabled' : ''}
+                        class="w-full text-left p-3.5 rounded-xl border-2 font-semibold text-xs sm:text-sm transition ${
+                            disabled
+                                ? 'border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed'
+                                : 'border-slate-200 hover:border-emerald-500 bg-white hover:bg-emerald-50/40 text-slate-800 cursor-pointer'
+                        }">
+                        ${ch.label} ${disabled ? '(Nedostatek financí)' : ''}
+                    </button>
+                `;
+            }).join('');
+
+            gameState.pendingEvent = { event: chosenEvent, impacts: scaledImpacts, year: eventYear };
+            document.getElementById('event-modal').classList.remove('hidden');
+        }
+
+        function resolveEventChoice(choiceIdx) {
+            const { event, impacts, year } = gameState.pendingEvent;
+            const choice = event.choices[choiceIdx];
+
+            // Skrytí efektu počasí
+            document.getElementById('weather-rain').classList.add('hidden');
+            document.getElementById('weather-heat').classList.add('hidden');
+            document.getElementById('event-modal').classList.add('hidden');
+
+            // Aplikace dopadů události + zvolené reakce + příjem do nového kola
+            const totalBudgetDelta = impacts.budget + choice.bonus.budget + gameState.economy;
+            gameState.budget = Math.max(0, gameState.budget + totalBudgetDelta);
+            gameState.resilience = clamp(gameState.resilience + impacts.resilience + choice.bonus.resilience, 0, 100);
+            gameState.happiness = clamp(gameState.happiness + impacts.happiness + choice.bonus.happiness, 0, 100);
+            gameState.ecology = clamp(gameState.ecology + impacts.ecology + choice.bonus.ecology, 0, 100);
+
+            addLog(`<strong>Rok ${year} (${event.title}):</strong> Zvoleno <em>${choice.label.split('(')[0].trim()}</em>. Příjem z ekonomiky +${gameState.economy} mil. Kč.`, 'event');
+
+            // Kontrola předčasného kolapsu nebo konce 12. kola
+            if (gameState.resilience <= 0 || gameState.happiness <= 0) {
+                showGameOver(true);
+                return;
+            }
+
+            if (gameState.round >= gameState.maxRounds) {
+                showGameOver(false);
+                return;
+            }
+
+            gameState.round += 1;
+            updateUI();
+        }
+
+        function showGameOver(earlyCollapse) {
+            document.getElementById('end-resilience').textContent = `${gameState.resilience} %`;
+            document.getElementById('end-happiness').textContent = `${gameState.happiness} %`;
+            document.getElementById('end-ecology').textContent = `${gameState.ecology} %`;
+            document.getElementById('end-budget').textContent = `${gameState.budget} mil.`;
+
+            // Určení jednoho ze 3 scénářů
+            const catStatus = getCategoryInvestmentStatus();
+            let scenario = 2; // výchozí: Šedý kompromis
+            if (earlyCollapse || gameState.resilience < 35 || gameState.happiness < 35) {
+                scenario = 1; // Město nepřežilo klimatickou krizi
+            } else if (catStatus.allSatisfied && gameState.resilience >= 70 && gameState.ecology >= 65 && gameState.happiness >= 65) {
+                scenario = 3; // Zelené a odolné město budoucnosti 2050
+            }
+
+            const earnedBadges = [];
+            if (catStatus.allSatisfied) earnedBadges.push('⚖️ Vyvážený rozvoj všech 3 pilířů');
+            if (gameState.levels.parks >= 2 && gameState.levels.wetlands >= 2) earnedBadges.push('🌿 Mistr modrozelené infrastruktury');
+            if (gameState.levels.solar >= 2 && gameState.levels.insulation >= 2) earnedBadges.push('☀️ Energetický vizionář');
+            if (gameState.happiness >= 80) earnedBadges.push('❤️ Miláček obyvatel');
+            if (gameState.budget >= 60) earnedBadges.push('💰 Skvělý hospodář');
+            if (earnedBadges.length === 0) earnedBadges.push('🏛️ Starosta ve zkoušce');
+
+            const header = document.getElementById('gameover-header');
+            const title = document.getElementById('gameover-title');
+            const subtitle = document.getElementById('gameover-subtitle');
+            const analysis = document.getElementById('gameover-analysis');
+
+            if (scenario === 1) {
+                header.className = 'p-6 sm:p-8 text-white bg-gradient-to-r from-rose-700 to-red-900';
+                title.textContent = 'Scénář 1: Město nepřežilo klimatickou krizi';
+                subtitle.textContent = 'Extrémní výkyvy počasí a nespokojenost obyvatel překročily únosnou mez.';
+                analysis.textContent = 'Nedostatečné investice do adaptace na změnu klimatu způsobily, že vlny veder, přívalové deště nebo energetické šoky město postupně paralyzovaly. Příště zkuste včas kombinovat modrozelenou infrastrukturu (parky, mokřady, zelené střechy) se zateplením a podporou komunity.';
+            } else if (scenario === 2) {
+                header.className = 'p-6 sm:p-8 text-white bg-gradient-to-r from-amber-600 to-slate-700';
+                title.textContent = 'Scénář 2: Šedý kompromis v roce 2050';
+                subtitle.textContent = 'Město přežilo do roku 2050, ale čelí vysokým nákladům a nedokončené transformaci.';
+                analysis.textContent = 'Dokázali jste město udržet v chodu až do roku 2050, avšak k dosažení plně odolného a zeleného města chybělo ještě více odvahy v ekologických a adaptačních projektech (nebo vyvážení všech 3 pilířů). Obyvatelé jsou v bezpečí, ale v horkých létech město stále bojuje s přehříváním.';
+            } else {
+                header.className = 'p-6 sm:p-8 text-white bg-gradient-to-r from-emerald-600 to-teal-700';
+                title.textContent = 'Scénář 3: Zelené a odolné město budoucnosti 2050!';
+                subtitle.textContent = 'Gratulujeme! Vytvořili jste evropský vzor udržitelného a prosperujícího města.';
+                analysis.textContent = 'Vaše vyvážené investice do modrozelené infrastruktury, čisté energetiky i rozvoje společnosti proměnily město v oázu kvality života. Přívalové deště zachytávají mokřady a propustné povrchy, ulice chladí vzrostlé aleje a obyvatelé jsou hrdí na svého starostu!';
+            }
+
+            document.getElementById('gameover-badges').innerHTML = earnedBadges
+                .map(b => `<span class="px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200 text-xs font-bold text-slate-800">${b}</span>`)
+                .join('');
+
+            document.getElementById('gameover-modal').classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
